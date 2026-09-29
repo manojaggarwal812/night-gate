@@ -2,6 +2,8 @@
 
 **Prove you meet an eligibility threshold without revealing the underlying private value.**
 
+Public repo: https://github.com/manojaggarwal812/night-gate
+
 NightGate is a Midnight Compact contract for threshold eligibility checks (age ≥ 18, score ≥ 70, membership tier ≥ X). The sensitive value stays in a private witness; observers only see whether the check passed, how many checks ran, and an optional commitment hash.
 
 This repository is the **Level 1 — New Moon** submission for the New Moon to Full program: compile, test, Preview deploy evidence, and a public GitHub repo. No Lace frontend, no Vercel — those belong to later levels.

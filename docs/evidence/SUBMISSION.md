@@ -5,7 +5,7 @@
 | Compact 0.31.1 compile → managed artifacts | Done | `contracts/managed/night-gate/`, `docs/screenshots/compile-evidence.html` |
 | Witnesses + Vitest ≥3 tests | Done | `src/witnesses.ts`, `tests/night-gate.test.ts` (6 passing) |
 | Preview deploy recorded | Attempted — RPC sync hang; address pending | `docs/evidence/DEPLOYMENT.md`, `docs/screenshots/deploy-evidence.html` |
-| Public GitHub repo | Done | Linked from README |
+| Public GitHub repo | Done | https://github.com/manojaggarwal812/night-gate |
 | README privacy + mermaid + checklist | Done | `README.md` |
 | ≥5 meaningful commits on `main` | Done | `git log --oneline` |
 | No secrets committed | Done | `.gitignore` excludes `.env` / seeds |
