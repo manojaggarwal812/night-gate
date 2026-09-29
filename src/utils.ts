@@ -32,8 +32,8 @@ import { witnesses } from "./witnesses.js";
 // @ts-expect-error Required for wallet sync in Node
 globalThis.WebSocket = WebSocket;
 
-const net = resolveNetwork("preview");
-setNetworkId("preview");
+const net = resolveNetwork();
+setNetworkId(net.network);
 
 export const CONFIG = {
   indexer: net.indexerUrl,

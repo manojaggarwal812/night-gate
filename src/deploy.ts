@@ -1,11 +1,8 @@
 /**
- * Non-interactive Preview deploy for NightGate (Level 1 — New Moon).
+ * Deploy NightGate to Preview or Preprod.
  *
- * Usage:
- *   MIDNIGHT_SEED=<64-hex> npm run deploy:preview
- *   # or omit seed to generate one, print faucet URL, wait for funds
- *
- * After success writes docs/evidence/DEPLOYMENT.md (never writes the seed).
+ *   MIDNIGHT_NETWORK=preprod MIDNIGHT_SEED=<64-hex> npm run deploy:preprod
+ *   MIDNIGHT_CONTRACT_ADDRESS=<hex> RECORD_ONLY=1 npm run deploy:preprod
  */
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
@@ -27,9 +24,11 @@ import {
   CONFIG,
 } from "./utils.js";
 import { createPrivateState } from "./witnesses.js";
+import { resolveNetwork } from "./network.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, "..");
+const netName = (process.env.MIDNIGHT_NETWORK ?? "preprod").toLowerCase();
 
 function assertArtifacts() {
   for (const dir of ["compiler", "contract", "keys", "zkir"]) {
@@ -45,11 +44,15 @@ function writeDeployEvidence(address: string, deployer: string, extra = "") {
   const evidenceDir = join(root, "docs", "evidence");
   mkdirSync(evidenceDir, { recursive: true });
   const stamp = new Date().toISOString();
-  const body = `# NightGate — Preview deployment
+  const networkLabel =
+    netName === "preprod"
+      ? "Preprod (Level 2 — Waxing Crescent)"
+      : "Preview (Level 1 — New Moon)";
+  const body = `# NightGate — deployment
 
 | Field | Value |
 |---|---|
-| Network | Preview (Level 1 — New Moon) |
+| Network | ${networkLabel} |
 | Contract address | \`${address}\` |
 | Deployer unshielded | \`${deployer}\` |
 | Timestamp (UTC) | ${stamp} |
@@ -60,14 +63,15 @@ function writeDeployEvidence(address: string, deployer: string, extra = "") {
 
 ## Notes
 
-- Level 1 primary evidence is **Preview**, not Preprod.
+- Level 2 requires a **Preprod** address when available.
+- Lace UI deploy is an alternate path: connect wallet → Deploy to Preprod.
 - Secrets (seeds) are never committed. Use \`.env\` locally only.
 ${extra}
 
 ## Log snippet
 
 \`\`\`
-NightGate deploy target: Preview
+NightGate deploy target: ${netName}
 Contract: ${address}
 Deployer: ${deployer}
 At: ${stamp}
@@ -76,41 +80,36 @@ At: ${stamp}
 
   writeFileSync(join(evidenceDir, "DEPLOYMENT.md"), body);
   writeFileSync(
-    join(evidenceDir, "preview-deploy.txt"),
-    `network=preview\ncontract=${address}\ndeployer=${deployer}\nat=${stamp}\n`,
+    join(evidenceDir, `${netName}-deploy.txt`),
+    `network=${netName}\ncontract=${address}\ndeployer=${deployer}\nat=${stamp}\n`,
   );
   console.log("Wrote docs/evidence/DEPLOYMENT.md");
 }
 
 async function requestFaucet(address: string) {
   const url = CONFIG.faucet.replace(/\/$/, "");
-  const attempts = [
-    { path: "/request", body: { address } },
-    { path: "/api/request", body: { address } },
-    { path: "/", body: { address } },
-  ];
-  for (const a of attempts) {
+  for (const path of ["/request", "/api/request", "/"]) {
     try {
-      const res = await fetch(`${url}${a.path}`, {
+      const res = await fetch(`${url}${path}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify(a.body),
+        body: JSON.stringify({ address }),
       });
       const text = await res.text();
-      console.log(`Faucet ${a.path} → ${res.status}: ${text.slice(0, 200)}`);
+      console.log(`Faucet ${path} → ${res.status}: ${text.slice(0, 200)}`);
       if (res.ok) return true;
     } catch (err) {
-      console.log(`Faucet ${a.path} failed:`, err);
+      console.log(`Faucet ${path} failed:`, err);
     }
   }
   return false;
 }
 
 async function main() {
-  console.log("\n=== NightGate Preview deploy (Level 1) ===\n");
+  resolveNetwork(netName);
+  console.log(`\n=== NightGate ${netName} deploy ===\n`);
   assertArtifacts();
 
-  // Allow recording a known address without live deploy
   const existing = process.env.MIDNIGHT_CONTRACT_ADDRESS?.trim();
   if (existing && process.env.RECORD_ONLY === "1") {
     writeDeployEvidence(
@@ -125,29 +124,48 @@ async function main() {
     toHex(Buffer.from(generateRandomSeed()));
 
   if (!process.env.MIDNIGHT_SEED) {
-    console.log(
-      "Generated ephemeral seed (NOT saved to disk). Re-fund this address if you need to re-deploy.",
-    );
+    console.log("Generated ephemeral seed (NOT saved to disk).");
   }
 
-  console.log("Creating wallet + syncing Preview…");
+  console.log(`Creating wallet + syncing ${netName}…`);
   const walletCtx = await createWallet(seed);
-  const state = await Rx.firstValueFrom(
-    walletCtx.wallet.state().pipe(
-      Rx.throttleTime(3000),
-      Rx.filter((s) => s.isSynced),
-    ),
-  );
 
-  const address = walletCtx.unshieldedKeystore.getBech32Address();
-  let balance = state.unshielded.balances[unshieldedToken().raw] ?? 0n;
+  let address = "";
+  try {
+    address = String(walletCtx.unshieldedKeystore.getBech32Address());
+  } catch {
+    address = "(address unavailable)";
+  }
   console.log(`Deployer unshielded: ${address}`);
-  console.log(`Balance: ${balance.toString()} tNIGHT units`);
+
+  const state = await Promise.race([
+    Rx.firstValueFrom(
+      walletCtx.wallet.state().pipe(
+        Rx.throttleTime(3000),
+        Rx.filter((s) => s.isSynced),
+      ),
+    ),
+    new Promise<never>((_, rej) =>
+      setTimeout(
+        () => rej(new Error(`${netName} wallet sync timed out after 90s`)),
+        90_000,
+      ),
+    ),
+  ]).catch(async (err) => {
+    writeDeployEvidence(
+      "PENDING_PREPROD_DEPLOY",
+      address,
+      `\n- **Blocker:** ${err instanceof Error ? err.message : String(err)}. Prefer Lace UI deploy on Preprod.\n`,
+    );
+    await walletCtx.wallet.stop().catch(() => undefined);
+    throw err;
+  });
+
+  let balance = state.unshielded.balances[unshieldedToken().raw] ?? 0n;
+  console.log(`Balance: ${balance.toString()}`);
 
   if (balance === 0n) {
-    console.log(`Requesting faucet funds… visit ${CONFIG.faucet} if API fails`);
     await requestFaucet(address);
-    console.log("Waiting up to 3 minutes for faucet funds…");
     try {
       balance = await Rx.firstValueFrom(
         walletCtx.wallet.state().pipe(
@@ -155,68 +173,31 @@ async function main() {
           Rx.filter((s) => s.isSynced),
           Rx.map((s) => s.unshielded.balances[unshieldedToken().raw] ?? 0n),
           Rx.filter((b) => b > 0n),
-          Rx.timeout({ first: 180_000 }),
+          Rx.timeout({ first: 120_000 }),
         ),
       );
-      console.log(`Funds received: ${balance.toString()}`);
     } catch {
       writeDeployEvidence(
-        "PENDING_PREVIEW_DEPLOY",
+        "PENDING_PREPROD_DEPLOY",
         address,
-        "\n- **Blocker:** Preview faucet did not fund within 3 minutes (captcha/rate-limit). Re-run after manual faucet funding with `MIDNIGHT_SEED` set.\n",
+        "\n- **Blocker:** faucet did not fund in time. Fund via Lace + https://faucet.preprod.midnight.network then deploy from the UI.\n",
       );
       await walletCtx.wallet.stop();
-      console.error("Faucet wait timed out — evidence left as PENDING.");
       process.exit(2);
     }
   }
 
-  // Register NIGHT for DUST if needed
-  const dustState = await Rx.firstValueFrom(
-    walletCtx.wallet.state().pipe(Rx.filter((s) => s.isSynced)),
-  );
-  if (dustState.dust.walletBalance(new Date()) === 0n) {
-    const nightUtxos = dustState.unshielded.availableCoins.filter(
-      (c: { meta?: { registeredForDustGeneration?: boolean } }) =>
-        !c.meta?.registeredForDustGeneration,
-    );
-    if (nightUtxos.length > 0) {
-      console.log("Registering NIGHT UTXOs for DUST generation…");
-      const recipe = await walletCtx.wallet.registerNightUtxosForDustGeneration(
-        nightUtxos,
-        walletCtx.unshieldedKeystore.getPublicKey(),
-        (payload: Uint8Array) => walletCtx.unshieldedKeystore.signData(payload),
-      );
-      await walletCtx.wallet.finalizeRecipe(recipe);
-      console.log("Waiting for DUST accrual…");
-      await Rx.firstValueFrom(
-        walletCtx.wallet.state().pipe(
-          Rx.throttleTime(10_000),
-          Rx.filter((s) => s.isSynced),
-          Rx.map((s) => s.dust.walletBalance(new Date())),
-          Rx.filter((b) => b > 0n),
-          Rx.timeout({ first: 300_000 }),
-        ),
-      ).catch(() => {
-        console.warn("DUST still zero after wait — deploy may fail on fees.");
-      });
-    }
-  }
-
-  console.log("Building providers + deploying (proof server required on :6300)…");
+  console.log("Deploying contract…");
   const providers = await createProviders(walletCtx);
   const deployed = await deployContract(providers, {
     compiledContract,
     privateStateId: "nightGatePrivateState",
     initialPrivateState: createPrivateState(0n),
   });
-
   const contractAddress = deployed.deployTxData.public.contractAddress;
-  console.log(`Deployed NightGate at: ${contractAddress}`);
+  console.log(`Deployed: ${contractAddress}`);
   writeDeployEvidence(contractAddress, address);
-
   await walletCtx.wallet.stop();
-  console.log("=== Deploy complete ===\n");
 }
 
 main().catch((err) => {

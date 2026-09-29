@@ -1,6 +1,5 @@
 /**
- * Midnight Preview network endpoints for Level 1 — New Moon.
- * Indexer uses GraphQL API v4 (required by midnight-js 4.x).
+ * Midnight network endpoints. Level 2 primary target is Preprod.
  */
 
 export type MidnightNetwork = "preview" | "preprod" | "undeployed";
@@ -33,9 +32,10 @@ const PREPROD: NetworkConfig = {
 };
 
 export function resolveNetwork(name?: string): NetworkConfig {
-  const key = (name ?? process.env.MIDNIGHT_NETWORK ?? "preview").toLowerCase();
-  if (key === "preprod") return PREPROD;
-  return PREVIEW;
+  const key = (name ?? process.env.MIDNIGHT_NETWORK ?? "preprod").toLowerCase();
+  if (key === "preview") return PREVIEW;
+  return PREPROD;
 }
 
 export const previewNetwork = PREVIEW;
+export const preprodNetwork = PREPROD;
