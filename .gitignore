@@ -12,3 +12,8 @@ keys-cache/
 midnight-level-db/
 *-state/
 .level/
+web/dist/
+web/node_modules/
+.vercel/
+
+.vercel

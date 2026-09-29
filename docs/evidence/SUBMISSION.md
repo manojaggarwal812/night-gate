@@ -1,16 +1,18 @@
-# NightGate — Level 1 submission status
+# NightGate — Level 2 submission status
 
 | Requirement | Status | Evidence |
 |---|---|---|
-| Compact 0.31.1 compile → managed artifacts | Done | `contracts/managed/night-gate/`, `docs/screenshots/compile-evidence.html` |
-| Witnesses + Vitest ≥3 tests | Done | `src/witnesses.ts`, `tests/night-gate.test.ts` (6 passing) |
-| Preview deploy recorded | Attempted — RPC sync hang; address pending | `docs/evidence/DEPLOYMENT.md`, `docs/screenshots/deploy-evidence.html` |
-| Public GitHub repo | Done | https://github.com/manojaggarwal812/night-gate |
-| README privacy + mermaid + checklist | Done | `README.md` |
-| ≥5 meaningful commits on `main` | Done | `git log --oneline` |
-| No secrets committed | Done | `.gitignore` excludes `.env` / seeds |
-| Distinct from attestation clones | Done | NightGate eligibility-gate product |
+| Lace connect / disconnect | Done | `web/src/hooks/useLaceWallet.ts`, UI topbar |
+| Circuit called from frontend | Done | `web/src/lib/nightGateApi.ts` → `checkEligibility` |
+| Observable privacy behavior | Done | Public panel + score cleared after prove; privacy table |
+| Preprod contract address | Pending until Lace/CLI deploy succeeds | `docs/evidence/DEPLOYMENT.md` |
+| Public GitHub | Done | https://github.com/manojaggarwal812/night-gate |
+| Live demo (Vercel) | Done | https://night-gate-mauve.vercel.app |
+| Demo video | Instructions ready | `docs/evidence/DEMO_VIDEO.md` |
+| ≥8 commits | Tracked on `main` | `git rev-list --count HEAD` |
+| README privacy claim | Done | `README.md` |
+| Vitest ≥3 | Done (6 passing) | `npm test` |
 
 ## Level claim
 
-**Level 1 — New Moon only.** Level 2/3 (Lace UI, Vercel) are not claimed.
+**Level 2 — Waxing Crescent** (builds on completed Level 1).

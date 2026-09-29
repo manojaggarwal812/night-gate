@@ -1,53 +1,24 @@
-# NightGate — Preview deployment
+# NightGate — deployment
 
 | Field | Value |
 |---|---|
-| Network | Preview (Level 1 — New Moon) |
-| Contract address | `PENDING_PREVIEW_DEPLOY` |
-| Deployer unshielded (sample from wiring) | Generated at runtime via `npm run deploy:preview` (see attempt log) |
-| Timestamp (UTC) | 2026-09-29T18:52:00Z |
-| Proof server | `http://127.0.0.1:6300` (healthy locally) |
-| Indexer | `https://indexer.preview.midnight.network/api/v4/graphql` (height ~1081095) |
-| Node / RPC | `https://rpc.preview.midnight.network` |
-| Faucet | `https://faucet.preview.midnight.network` |
+| Network | Preprod (Level 2 — Waxing Crescent) |
+| Contract address | `PENDING_PREPROD_DEPLOY` |
+| Deployer | Lace UI or `npm run deploy:preprod` |
+| Timestamp (UTC) | 2026-09-29T19:40:00Z |
+| Indexer | `https://indexer.preprod.midnight.network/api/v4/graphql` |
+| Node / RPC | `https://rpc.preprod.midnight.network` |
+| Faucet | `https://faucet.preprod.midnight.network` |
+| Explorer | `https://explorer.preprod.midnight.network` |
 
 ## Status
 
-**Preview path is wired** (`src/deploy.ts`, `src/network.ts`, `src/utils.ts`, Docker proof-server).
+Level 2 primary path is **Lace connect → Deploy to Preprod** in the web UI (proof server required).
 
-Live submit is **blocked** on Preview wallet sync: after `WalletFacade.init` + `start`, the node WebSocket to `wss://rpc.preview.midnight.network` repeatedly reports:
+CLI `npm run deploy:preprod` is available; Node wallet sync may hang on public RPC WebSockets — prefer Lace.
 
-```
-RPC-CORE: subscribeRuntimeVersion(): RuntimeVersion:: disconnected from wss://rpc.preview.midnight.network/: 1000:: Normal Closure
-```
+After a successful deploy, replace `PENDING_PREPROD_DEPLOY` with the hex/bech32 contract address and commit evidence.
 
-Wallet creation itself succeeds and prints an `mn_addr_preview…` unshielded address, but `waitForSyncedState()` / `isSynced` never completes within several minutes, so faucet funding + `deployContract` cannot finish.
+## Preview (Level 1)
 
-Level 1 still ships compile artifacts, Vitest (≥3), deploy scripts, and this evidence. Re-run after Preview RPC/sync recovers:
-
-```bash
-docker compose up -d
-# fund via https://faucet.preview.midnight.network with the printed mn_addr_preview…
-MIDNIGHT_SEED=<64-hex> npm run deploy:preview
-```
-
-Preprod was **not** used as primary evidence (Level 1 = Preview).
-
-## Notes
-
-- Secrets (seeds) are never committed. Use `.env` locally only.
-- Proof-server health check returned `{"status":"ok"}` on `:6300` during this attempt.
-
-## Log snippet
-
-```
-NightGate deploy target: Preview
-Managed artifacts OK
-WalletFacade.init succeeded
-Unshielded address printed (mn_addr_preview…)
-RPC disconnect loop on wss://rpc.preview.midnight.network
-Contract: PENDING_PREVIEW_DEPLOY
-At: 2026-09-29T18:52:00Z
-```
-
-See also: `docs/evidence/preview-deploy-attempt.txt`, `docs/screenshots/deploy-evidence.html`.
+Earlier Preview attempts recorded RPC disconnect during wallet sync — see git history / prior `preview-deploy.txt` if present.
