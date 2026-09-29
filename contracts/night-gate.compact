@@ -1,0 +1,61 @@
+pragma language_version 0.23;
+
+import CompactStandardLibrary;
+
+/**
+ * NightGate — threshold eligibility without revealing the private claim.
+ *
+ * Encoding (prover-side):
+ * - `privateClaim` is a 32-byte witness payload.
+ * - The first 8 bytes are the little-endian u64 score/age.
+ * - The Compact circuit takes `score: Uint<64>` as a *private* circuit
+ *   parameter (Midnight treats circuit params as private by default).
+ * - TypeScript witnesses must supply a score that matches that encoding.
+ *
+ * Behavior on under-threshold:
+ * - Call is allowed.
+ * - Public `eligible` is set to `false`.
+ * - `checkCount` still increments.
+ * - `latestCommitment` is always updated to persistentHash(claim).
+ *
+ * Threshold constant: 18 (age / eligibility gate demo) — inlined below.
+ */
+
+export ledger eligible: Boolean;
+export ledger checkCount: Counter;
+export ledger latestCommitment: Bytes<32>;
+
+constructor() {
+  eligible = false;
+  latestCommitment = pad(32, "");
+}
+
+/**
+ * Private 32-byte claim. Never written to the public ledger in cleartext.
+ */
+witness privateClaim(): Bytes<32>;
+
+/**
+ * Submit an eligibility check.
+ * `score` is a private circuit parameter (not a public ledger field).
+ * Threshold is 18.
+ */
+export circuit checkEligibility(score: Uint<64>): [] {
+  const claim = privateClaim();
+  const commitment = disclose(persistentHash<Bytes<32>>(claim));
+  latestCommitment = commitment;
+  eligible = disclose(score >= 18);
+  checkCount.increment(1);
+}
+
+export circuit getCheckCount(): Uint<64> {
+  return checkCount;
+}
+
+export circuit getEligible(): Boolean {
+  return eligible;
+}
+
+export circuit getLatestCommitment(): Bytes<32> {
+  return latestCommitment;
+}
