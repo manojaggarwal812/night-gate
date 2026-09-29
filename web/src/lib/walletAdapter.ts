@@ -1,0 +1,59 @@
+import type { ConnectedAPI } from "@midnight-ntwrk/dapp-connector-api";
+import type {
+  MidnightProvider,
+  UnboundTransaction,
+  WalletProvider,
+} from "@midnight-ntwrk/midnight-js-types";
+import { Transaction } from "@midnight-ntwrk/ledger-v8";
+import { bytesToHex, hexToBytes } from "@ng/witnesses";
+
+type FinalizedLike = {
+  serialize: () => Uint8Array;
+  identifiers: () => string[];
+};
+
+function txIdFromFinalized(tx: FinalizedLike): string {
+  const id = tx.identifiers().at(-1);
+  if (!id) throw new Error("Finalized transaction has no identifier");
+  return id;
+}
+
+/**
+ * Bridge Lace ConnectedAPI ↔ midnight-js WalletProvider / MidnightProvider.
+ */
+export function createLaceProviders(
+  api: ConnectedAPI,
+  shielded: {
+    shieldedCoinPublicKey: string;
+    shieldedEncryptionPublicKey: string;
+  },
+): { walletProvider: WalletProvider; midnightProvider: MidnightProvider } {
+  const walletProvider: WalletProvider = {
+    getCoinPublicKey: () => shielded.shieldedCoinPublicKey as never,
+    getEncryptionPublicKey: () =>
+      shielded.shieldedEncryptionPublicKey as never,
+    async balanceTx(tx: UnboundTransaction) {
+      const hex = bytesToHex(tx.serialize());
+      const { tx: balancedHex } = await api.balanceUnsealedTransaction(hex, {
+        payFees: true,
+      });
+      return Transaction.deserialize(
+        "signature",
+        "proof",
+        "binding",
+        hexToBytes(balancedHex),
+      ) as never;
+    },
+  };
+
+  const midnightProvider: MidnightProvider = {
+    async submitTx(tx) {
+      const finalized = tx as unknown as FinalizedLike;
+      const id = txIdFromFinalized(finalized);
+      await api.submitTransaction(bytesToHex(finalized.serialize()));
+      return id as never;
+    },
+  };
+
+  return { walletProvider, midnightProvider };
+}
