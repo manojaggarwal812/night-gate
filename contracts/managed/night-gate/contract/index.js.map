@@ -1,0 +1,8 @@
+{
+  "version": 3,
+  "file": "index.js",
+  "sourceRoot": "../../../../",
+  "sources": ["contracts/night-gate.compact", "compiler/standard-library.compact"],
+  "names": [],
+  "mappings": ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;EA2BA;;;;;;;;;;;;;MAeA,AAAA,gBAMC;;;;;cAN+B,OAAe;;;;;;;;;;;;;;;;;;yCAAf,OAAe;;;;;;;;;kDAAf,OAAe;;;OAM9C;MAED,AAAA,aAEC;;;;;;;;;;;;;;;;;;;;;;OAAA;MAED,AAAA,WAEC;;;;;;;;;;;;;;;;;;;;;;OAAA;MAED,AAAA,mBAEC;;;;;;;;;;;;;;;;;;;;;;OAAA;;;;;;;;;;;;;;GA9BA;EAHD;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;IAJA;;;;;;;;;yEAAgC;IAChC;;;;;;;;;yEAAkC;IAClC;;;;;;;;;yEAA0C;IAGxC;;;;;;;;;yEAAQ;IACR;;;;;;;;;yEAAgB;;;;;;;GACjB;EC9BD,AAAA,kBAAA;oEAAA;;;EDmCA,AAAA,eAAkC;;0DAAlC,YAAkC;;;;;;;;;;;;;;GAAA;EAOlC,AAAA,mBAMC,4BAN+B,OAAe;UACvC,OAAsB;UACtB,YAAuD,0BAAP,OAAK;IAC3D;;;;;;;2HAAmB,YAAU;;yEAAb;UAChB,KAAQ,GAAY,OAAK;IAAzB;;;;;;;2HAAA,KAAQ;;yEAAA;UACR,KAAU;IAAV;;;;;;;;;;6FAAA,KAAU;;;;wEAAA;;GACX;EAED,AAAA,gBAEC;mCADQ;;;;;;;;;;;wGAAU;GAClB;EAED,AAAA,cAEC;mCADQ;;;;;;;;;;;wGAAQ;GAChB;EAED,AAAA,sBAEC;mCADQ;;;;;;;;;;;wGAAgB;GACxB;;;;;;;;;;;;;;;;IArCD;qCAAA;;;;;;;;;;;0GAAgC;KAAA;IAChC;qCAAA;;;;;;;;;;;0GAAkC;KAAA;IAClC;qCAAA;;;;;;;;;;;0GAA0C;KAAA;;;;;;;;;;"
+}
