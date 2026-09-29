@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import "@midnight-ntwrk/dapp-connector-api";
 import { THRESHOLD } from "@ng/witnesses";
-import { useLaceWallet } from "./hooks/useLaceWallet";
+import { useMidnightWallet } from "./hooks/useLaceWallet";
 import { buildProviders } from "./lib/providers";
 import {
   checkEligibility,
@@ -20,19 +20,21 @@ function shortAddr(value: string): string {
 }
 
 export default function App() {
-  const wallet = useLaceWallet();
+  const wallet = useMidnightWallet();
   const [contractAddress, setContractAddress] = useState(DEFAULT_CONTRACT_ADDRESS);
   const [deployed, setDeployed] = useState<DeployedNightGate | null>(null);
   const [scoreInput, setScoreInput] = useState("21");
   const [ledger, setLedger] = useState<PublicLedgerView | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
-  const [status, setStatus] = useState<string>("Connect Lace on Preprod to begin.");
+  const [status, setStatus] = useState<string>(
+    "Connect 1AM on Preprod to begin.",
+  );
   const [actionBusy, setActionBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
-  /** Cleared after a successful check so the private value is not left on-screen. */
   const [revealedLocally, setRevealedLocally] = useState(false);
 
   const thresholdLabel = useMemo(() => THRESHOLD.toString(), []);
+  const walletLabel = wallet.walletName ?? "1AM";
 
   async function withProviders<T>(
     fn: (
@@ -40,7 +42,7 @@ export default function App() {
     ) => Promise<T>,
   ): Promise<T> {
     const session = wallet.session.current;
-    if (!session) throw new Error("Connect Lace first");
+    if (!session) throw new Error("Connect 1AM first");
     const providers = await buildProviders(session.api);
     return fn(providers);
   }
@@ -131,7 +133,7 @@ export default function App() {
           ) : null}
           {wallet.connected ? (
             <button className="btn" type="button" onClick={wallet.disconnect}>
-              Disconnect Lace
+              Disconnect {walletLabel}
             </button>
           ) : (
             <button
@@ -140,7 +142,7 @@ export default function App() {
               disabled={wallet.busy}
               onClick={() => void wallet.connect().catch(() => undefined)}
             >
-              {wallet.busy ? "Connecting…" : "Connect Lace"}
+              {wallet.busy ? "Connecting…" : "Connect 1AM"}
             </button>
           )}
         </div>
@@ -150,7 +152,7 @@ export default function App() {
         <h1>NightGate</h1>
         <p>
           Prove you clear the eligibility threshold without putting the private
-          score on the public ledger. Waxing Crescent — Lace on Preprod.
+          score on the public ledger. Waxing Crescent — 1AM on Preprod.
         </p>
         <div className="cta-row">
           {!wallet.connected ? (
@@ -160,7 +162,7 @@ export default function App() {
               disabled={wallet.busy}
               onClick={() => void wallet.connect().catch(() => undefined)}
             >
-              Connect Lace on Preprod
+              Connect 1AM on Preprod
             </button>
           ) : (
             <button

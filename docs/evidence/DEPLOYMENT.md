@@ -4,8 +4,8 @@
 |---|---|
 | Network | Preprod (Level 2 — Waxing Crescent) |
 | Contract address | `PENDING_PREPROD_DEPLOY` |
-| Deployer | Lace UI or `npm run deploy:preprod` |
-| Timestamp (UTC) | 2026-09-29T19:40:00Z |
+| Deployer | **1AM** UI (preferred) or `npm run deploy:preprod` |
+| Timestamp (UTC) | 2026-09-29T19:50:00Z |
 | Indexer | `https://indexer.preprod.midnight.network/api/v4/graphql` |
 | Node / RPC | `https://rpc.preprod.midnight.network` |
 | Faucet | `https://faucet.preprod.midnight.network` |
@@ -13,12 +13,10 @@
 
 ## Status
 
-Level 2 primary path is **Lace connect → Deploy to Preprod** in the web UI (proof server required).
+Level 2 primary path: **1AM connect → Deploy to Preprod** on https://night-gate-mauve.vercel.app
 
-CLI `npm run deploy:preprod` is available; Node wallet sync may hang on public RPC WebSockets — prefer Lace.
+- 1AM injects `window.midnight['1am']`
+- 1AM typically sponsors proving/DUST via `getConfiguration().proverServerUri` (no local Docker required)
+- CLI Node wallet sync timed out on Preprod RPC WS — not the recommended path for 1AM users
 
-After a successful deploy, replace `PENDING_PREPROD_DEPLOY` with the hex/bech32 contract address and commit evidence.
-
-## Preview (Level 1)
-
-Earlier Preview attempts recorded RPC disconnect during wallet sync — see git history / prior `preview-deploy.txt` if present.
+After a successful 1AM deploy, replace `PENDING_PREPROD_DEPLOY` with the live address and commit.

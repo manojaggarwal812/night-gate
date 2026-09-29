@@ -14,7 +14,7 @@ npm run web:sync-zk
 vercel --prod
 ```
 
-After the first successful Lace **Deploy to Preprod**, set:
+After the first successful 1AM **Deploy to Preprod**, set:
 
 ```bash
 vercel env add VITE_CONTRACT_ADDRESS

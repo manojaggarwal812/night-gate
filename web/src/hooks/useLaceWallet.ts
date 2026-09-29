@@ -8,11 +8,13 @@ export type WalletSession = {
   api: ConnectedAPI;
   unshieldedAddress: string;
   networkId: string;
+  walletName: string;
 };
 
-export function useLaceWallet() {
+export function useMidnightWallet() {
   const [connected, setConnected] = useState(false);
   const [address, setAddress] = useState<string | null>(null);
+  const [walletName, setWalletName] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const session = useRef<WalletSession | null>(null);
@@ -34,23 +36,28 @@ export function useLaceWallet() {
           "getConnectionStatus",
         ]);
       } catch {
-        // Optional on some Lace builds
+        // Optional on some wallet builds
       }
       const { unshieldedAddress } = await api.getUnshieldedAddress();
       const status = await api.getConnectionStatus();
       if (status.status !== "connected") {
         throw new Error("Wallet did not report connected status");
       }
+      // Align DApp network id to whatever the wallet actually connected
+      setNetworkId(status.networkId);
       session.current = {
         api,
         unshieldedAddress,
         networkId: status.networkId,
+        walletName: wallet.name || "1AM",
       };
       setAddress(unshieldedAddress);
+      setWalletName(wallet.name || "1AM");
       setConnected(true);
     } catch (err) {
       setConnected(false);
       setAddress(null);
+      setWalletName(null);
       session.current = null;
       setError(err instanceof Error ? err.message : String(err));
       throw err;
@@ -63,12 +70,14 @@ export function useLaceWallet() {
     session.current = null;
     setConnected(false);
     setAddress(null);
+    setWalletName(null);
     setError(null);
   }, []);
 
   return {
     connected,
     address,
+    walletName,
     busy,
     error,
     session,
@@ -76,3 +85,6 @@ export function useLaceWallet() {
     disconnect,
   };
 }
+
+/** @deprecated Use useMidnightWallet — kept for older imports */
+export const useLaceWallet = useMidnightWallet;

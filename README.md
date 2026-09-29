@@ -5,14 +5,14 @@
 Public repo: https://github.com/manojaggarwal812/night-gate  
 Live demo: https://night-gate-mauve.vercel.app
 
-NightGate is a Midnight Compact contract + Lace frontend for threshold eligibility checks (age ≥ 18, score ≥ 70, membership tier ≥ X). The sensitive value stays in a private witness; observers only see whether the check passed, how many checks ran, and a commitment hash.
+NightGate is a Midnight Compact contract + **1AM** frontend for threshold eligibility checks (age ≥ 18, score ≥ 70, membership tier ≥ X). The sensitive value stays in a private witness; observers only see whether the check passed, how many checks ran, and a commitment hash.
 
 ## Levels
 
 | Level | Status |
 |---|---|
 | Level 1 — New Moon (compile, tests, Preview path) | Done |
-| Level 2 — Waxing Crescent (Lace UI on Preprod, circuit call, live demo) | In progress / this README |
+| Level 2 — Waxing Crescent (1AM UI on Preprod, circuit call, live demo) | In progress / this README |
 
 ## Initial product idea
 
@@ -26,7 +26,7 @@ Under-threshold callers are **allowed**: the call succeeds with `eligible = fals
 
 | Data | Visibility | Where it lives | Notes |
 |---|---|---|---|
-| Private claim (`Bytes<32>`) | **PRIVATE** (witness) | Prover / Lace session | First 8 bytes = LE `u64` score/age. Never cleartext on ledger. |
+| Private claim (`Bytes<32>`) | **PRIVATE** (witness) | Prover / 1AM session | First 8 bytes = LE `u64` score/age. Never cleartext on ledger. |
 | Circuit `score` param | **PRIVATE** | Circuit witness | Must match claim encoding. |
 | `eligible` | **PUBLIC** after `disclose()` | Ledger | Boolean `score >= 18`. |
 | `checkCount` | **PUBLIC** | Ledger `Counter` | Increments on every `checkEligibility`. |
@@ -36,13 +36,13 @@ Under-threshold callers are **allowed**: the call succeeds with `eligible = fals
 
 ```mermaid
 flowchart LR
-  Lace[Lace wallet Preprod]
+  Wallet[1AM wallet Preprod]
   UI[NightGate web UI]
   Witness[Private claim Bytes32]
   Circuit[checkEligibility]
   Ledger[Public Preprod ledger]
 
-  Lace --> UI
+  Wallet --> UI
   UI --> Witness
   Witness --> Circuit
   Circuit -->|disclose eligible + commitment| Ledger
@@ -53,13 +53,13 @@ flowchart LR
 ```mermaid
 sequenceDiagram
   participant User
-  participant Lace
+  participant OneAM as 1AM
   participant UI as NightGate UI
   participant Circuit as NightGate circuit
   participant Ledger as Preprod ledger
 
-  User->>Lace: Connect on Preprod
-  Lace->>UI: unshielded address
+  User->>OneAM: Connect on Preprod
+  OneAM->>UI: unshielded address
   User->>UI: private score input
   UI->>Circuit: checkEligibility private score
   Circuit->>Ledger: disclose eligible
@@ -73,8 +73,8 @@ sequenceDiagram
 - Node.js 22+
 - Compact CLI `+0.31.1` (WSL on Windows: `npm run compile:wsl`)
 - `@midnight-ntwrk/compact-runtime@0.16.0`, Midnight.js **4.1.1**
-- Docker proof-server on `:6300` (Lace should point at the same prover URI)
-- Lace (Midnight) browser extension on **Preprod**
+- **1AM** browser wallet on **Preprod** ([1am.xyz](https://1am.xyz)) — Lace also works as fallback
+- Optional local Docker proof-server on `:6300` (not required when 1AM supplies `proverServerUri`)
 
 ## Quick start
 
@@ -86,9 +86,11 @@ npm run web:sync-zk
 npm run web:dev
 ```
 
-Open http://localhost:5173 — Connect Lace (Preprod) → Deploy or Join → enter private score → Call `checkEligibility`.
+Open http://localhost:5173 — Connect **1AM** (Preprod) → Deploy or Join → enter private score → Call `checkEligibility`.
 
-CLI deploy (optional; Lace UI deploy is preferred for Level 2):
+1AM injects at `window.midnight['1am']`, sponsors proving/DUST via its prover, and does not require a local Docker proof-server for typical flows ([1AM developers](https://1am.xyz/developers)).
+
+CLI deploy (optional; **1AM UI deploy** is preferred for Level 2):
 
 ```bash
 docker compose up -d
@@ -101,7 +103,7 @@ MIDNIGHT_NETWORK=preprod MIDNIGHT_SEED=<64-hex> npm run deploy:preprod
 night-gate/
   contracts/night-gate.compact
   contracts/managed/night-gate/
-  web/                 # Vite + React Lace DApp
+  web/                 # Vite + React 1AM DApp
   src/                 # witnesses, deploy helpers
   tests/
   docs/evidence/
@@ -119,14 +121,14 @@ night-gate/
 
 ## Preprod contract address
 
-See [docs/evidence/DEPLOYMENT.md](docs/evidence/DEPLOYMENT.md). After Lace deploy, set `VITE_CONTRACT_ADDRESS` for the live demo.
+See [docs/evidence/DEPLOYMENT.md](docs/evidence/DEPLOYMENT.md). After 1AM deploy, set `VITE_CONTRACT_ADDRESS` for the live demo.
 
 ## Evidence checklist — Level 2 — Waxing Crescent
 
-- [x] Lace connect / disconnect in UI
+- [x] 1AM connect / disconnect in UI (Lace fallback)
 - [x] Circuit call path from frontend (`checkEligibility`)
 - [x] Observable privacy behavior (public eligible/count/commitment only; score cleared after prove)
-- [x] Preprod deploy path (CLI + Lace UI) documented; address recorded when available
+- [x] Preprod deploy path (CLI + 1AM UI) documented; address recorded when available
 - [x] Public GitHub repository + README privacy claim
 - [x] Live demo (Vercel) — see `docs/evidence/LIVE_DEMO.md`
 - [x] Demo video instructions — see `docs/evidence/DEMO_VIDEO.md`

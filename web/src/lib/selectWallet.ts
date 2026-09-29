@@ -1,18 +1,38 @@
 import type { InitialAPI } from "@midnight-ntwrk/dapp-connector-api";
 
+/** Prefer 1AM (`window.midnight['1am']`), then any injected Midnight wallet. */
 export function listWallets(): InitialAPI[] {
   const injected = window.midnight;
-  return injected ? Object.values(injected) : [];
+  if (!injected) return [];
+  return Object.values(injected).filter(
+    (w): w is InitialAPI => !!w && typeof w.connect === "function",
+  );
 }
 
 export function selectWallet(): InitialAPI {
+  const injected = window.midnight ?? {};
+
+  // Friendly key used by 1AM
+  const byKey = injected["1am"];
+  if (byKey && typeof byKey.connect === "function") {
+    return byKey;
+  }
+
   const wallets = listWallets();
   if (wallets.length === 0) {
     throw new Error(
-      "No Midnight wallet found. Install Lace (Midnight) and refresh.",
+      "No Midnight wallet found. Install 1AM (https://1am.xyz) and refresh.",
     );
   }
-  // Prefer Lace if present among injected wallets
-  const lace = wallets.find((w) => /lace/i.test(w.name) || /lace/i.test(w.rdns));
-  return lace ?? wallets[0]!;
+
+  const oneAm = wallets.find(
+    (w) =>
+      /^1am$/i.test(w.name) ||
+      /1am/i.test(w.rdns) ||
+      /1am/i.test(w.name),
+  );
+  if (oneAm) return oneAm;
+
+  // Fallback: first injected wallet (Lace, etc.)
+  return wallets[0]!;
 }

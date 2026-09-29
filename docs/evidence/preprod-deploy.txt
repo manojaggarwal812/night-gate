@@ -1,0 +1,4 @@
+network=preprod
+contract=PENDING_PREPROD_DEPLOY
+deployer=mn_addr_preprod1cj85nrv0dza20n0kv9kc75qpgsjn46km48fe3nwplmyd9ekqq9jqsltm5e
+at=2026-09-29T19:18:09.549Z

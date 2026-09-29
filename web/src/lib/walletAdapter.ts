@@ -19,9 +19,10 @@ function txIdFromFinalized(tx: FinalizedLike): string {
 }
 
 /**
- * Bridge Lace ConnectedAPI ↔ midnight-js WalletProvider / MidnightProvider.
+ * Bridge Midnight ConnectedAPI (1AM / Lace / …) ↔ midnight-js providers.
+ * 1AM sponsors proving/DUST via its configured prover — use getConfiguration().
  */
-export function createLaceProviders(
+export function createWalletProvidersFromConnector(
   api: ConnectedAPI,
   shielded: {
     shieldedCoinPublicKey: string;
@@ -57,3 +58,6 @@ export function createLaceProviders(
 
   return { walletProvider, midnightProvider };
 }
+
+/** @deprecated alias */
+export const createLaceProviders = createWalletProvidersFromConnector;

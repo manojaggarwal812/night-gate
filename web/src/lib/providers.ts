@@ -4,7 +4,7 @@ import { indexerPublicDataProvider } from "@midnight-ntwrk/midnight-js-indexer-p
 import { FetchZkConfigProvider } from "@midnight-ntwrk/midnight-js-fetch-zk-config-provider";
 import { httpClientProofProvider } from "@midnight-ntwrk/midnight-js-http-client-proof-provider";
 import type { MidnightProviders } from "@midnight-ntwrk/midnight-js-types";
-import { createLaceProviders } from "./walletAdapter";
+import { createWalletProvidersFromConnector } from "./walletAdapter";
 import { PREPROD, ZK_ASSET_BASE } from "./config";
 
 export type NightGateProviders = MidnightProviders<
@@ -19,6 +19,7 @@ export async function buildProviders(
   const config = await api.getConfiguration();
   const indexer = config.indexerUri || PREPROD.indexerUrl;
   const indexerWs = config.indexerWsUri || PREPROD.indexerWsUrl;
+  // 1AM usually supplies its own sponsored prover URI here
   const proofUrl =
     config.proverServerUri || PREPROD.proofServerUrl;
 
@@ -28,10 +29,8 @@ export async function buildProviders(
   );
 
   const shielded = await api.getShieldedAddresses();
-  const { walletProvider, midnightProvider } = createLaceProviders(
-    api,
-    shielded,
-  );
+  const { walletProvider, midnightProvider } =
+    createWalletProvidersFromConnector(api, shielded);
 
   return {
     privateStateProvider: levelPrivateStateProvider({
