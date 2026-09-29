@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>NightGate — Preview deploy evidence</title>
+  <style>
+    body { margin: 2rem; background: #0b1220; color: #e8eef8; font-family: "IBM Plex Sans", "Segoe UI", sans-serif; }
+    .warn { color: #f0c674; font-weight: 600; }
+    pre { background: #121a2b; border: 1px solid #243049; padding: 1rem; overflow: auto; border-radius: 6px; }
+    table { border-collapse: collapse; margin-top: 1rem; }
+    td, th { border: 1px solid #243049; padding: 0.4rem 0.75rem; text-align: left; }
+  </style>
+</head>
+<body>
+  <h1>NightGate — Preview deploy evidence</h1>
+  <p class="warn">Status: BLOCKED — Preview RPC WebSocket disconnect during wallet sync (contract address pending)</p>
+  <table>
+    <tr><th>Field</th><th>Value</th></tr>
+    <tr><td>Network</td><td>Preview</td></tr>
+    <tr><td>Contract</td><td><code>PENDING_PREVIEW_DEPLOY</code></td></tr>
+    <tr><td>Proof server</td><td>OK on <code>:6300</code></td></tr>
+    <tr><td>Indexer</td><td>Responding (block height queried OK)</td></tr>
+    <tr><td>Blocker</td><td><code>wss://rpc.preview.midnight.network</code> Normal Closure during subscribeRuntimeVersion</td></tr>
+    <tr><td>Captured</td><td>2026-09-29T18:52:00Z</td></tr>
+  </table>
+  <h2>Attempt excerpt</h2>
+  <pre>=== NightGate Preview deploy (Level 1) ===
+Managed artifacts OK
+Generated ephemeral seed (NOT saved to disk)
+Creating wallet + syncing Preview…
+wallet created
+address mn_addr_preview…
+RPC-CORE: subscribeRuntimeVersion(): disconnected from wss://rpc.preview.midnight.network/: 1000:: Normal Closure
+waitForSyncedState → hang / timeout
+Contract: PENDING_PREVIEW_DEPLOY</pre>
+  <p>Full notes: <code>docs/evidence/DEPLOYMENT.md</code></p>
+</body>
+</html>

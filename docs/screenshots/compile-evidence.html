@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>NightGate — Compact compile evidence</title>
+  <style>
+    :root { color-scheme: light; font-family: "IBM Plex Sans", "Segoe UI", sans-serif; }
+    body { margin: 2rem; background: #0b1220; color: #e8eef8; }
+    h1 { font-size: 1.4rem; letter-spacing: 0.02em; }
+    .ok { color: #6ddea6; font-weight: 600; }
+    pre { background: #121a2b; border: 1px solid #243049; padding: 1rem; overflow: auto; border-radius: 6px; }
+    table { border-collapse: collapse; margin-top: 1rem; }
+    td, th { border: 1px solid #243049; padding: 0.4rem 0.75rem; text-align: left; }
+  </style>
+</head>
+<body>
+  <h1>NightGate — Level 1 compile evidence</h1>
+  <p class="ok">Status: SUCCESS — Compact <code>+0.31.1</code> via WSL</p>
+  <table>
+    <tr><th>Field</th><th>Value</th></tr>
+    <tr><td>Command</td><td><code>compact compile +0.31.1 contracts/night-gate.compact contracts/managed/night-gate</code></td></tr>
+    <tr><td>Host</td><td>Windows + WSL (Compact CLI requires Linux filesystem semantics)</td></tr>
+    <tr><td>Language</td><td>Compact 0.23</td></tr>
+    <tr><td>Runtime</td><td>@midnight-ntwrk/compact-runtime@0.16.0</td></tr>
+    <tr><td>Output</td><td><code>contracts/managed/night-gate/{compiler,contract,keys,zkir}</code></td></tr>
+    <tr><td>Circuits</td><td>checkEligibility, getCheckCount, getEligible, getLatestCommitment</td></tr>
+    <tr><td>Captured</td><td>2026-09-29T18:01:00Z</td></tr>
+  </table>
+  <h2>Log excerpt</h2>
+  <pre>compiling compact contract night-gate.compact
+  finished compiling compact contract night-gate.compact in …s
+  writing compiler-output artifacts to contracts/managed/night-gate/
+  compiler-version: 0.31.1
+  circuits: checkEligibility, getCheckCount, getEligible, getLatestCommitment
+  witness: privateClaim
+  keys + zkir generated for all circuits</pre>
+  <p>Artifacts committed under <code>contracts/managed/night-gate/</code> for reproducible tests.</p>
+</body>
+</html>

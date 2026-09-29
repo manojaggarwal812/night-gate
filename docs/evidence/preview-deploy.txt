@@ -1,0 +1,7 @@
+network=preview
+contract=PENDING_PREVIEW_DEPLOY
+blocker=preview_rpc_ws_disconnect_wallet_sync_hang
+proof_server=http://127.0.0.1:6300
+indexer=https://indexer.preview.midnight.network/api/v4/graphql
+node=https://rpc.preview.midnight.network
+at=2026-09-29T18:52:00Z
