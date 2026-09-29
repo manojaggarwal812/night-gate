@@ -12,8 +12,9 @@ export const PREPROD = {
     "https://explorer.preprod.midnight.network/contract",
 };
 
-/** Prefill from env after Preprod deploy succeeds. */
+/** Prefill Join field — env override or known Preprod deploy. */
 export const DEFAULT_CONTRACT_ADDRESS =
-  (import.meta.env.VITE_CONTRACT_ADDRESS as string | undefined)?.trim() ?? "";
+  (import.meta.env.VITE_CONTRACT_ADDRESS as string | undefined)?.trim() ||
+  "17d06850fed3c49058994d4fced343144159b622579e63fc11e4132307948eef";
 
 export const ZK_ASSET_BASE = "/zk/night-gate";

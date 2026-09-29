@@ -14,10 +14,8 @@ npm run web:sync-zk
 vercel --prod
 ```
 
-After the first successful 1AM **Deploy to Preprod**, set:
+Join is prefilled with the live Preprod address:
 
-```bash
-vercel env add VITE_CONTRACT_ADDRESS
-```
+`17d06850fed3c49058994d4fced343144159b622579e63fc11e4132307948eef`
 
-Then redeploy so Join is prefilled.
+(Override anytime with `VITE_CONTRACT_ADDRESS` on Vercel.)

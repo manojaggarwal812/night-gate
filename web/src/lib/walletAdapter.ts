@@ -4,7 +4,7 @@ import type {
   UnboundTransaction,
   WalletProvider,
 } from "@midnight-ntwrk/midnight-js-types";
-import { Transaction } from "@midnight-ntwrk/ledger-v8";
+import { Transaction } from "@midnight-ntwrk/midnight-js-protocol/ledger";
 import { bytesToHex, hexToBytes } from "@ng/witnesses";
 
 type FinalizedLike = {

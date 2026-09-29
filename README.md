@@ -12,7 +12,7 @@ NightGate is a Midnight Compact contract + **1AM** frontend for threshold eligib
 | Level | Status |
 |---|---|
 | Level 1 — New Moon (compile, tests, Preview path) | Done |
-| Level 2 — Waxing Crescent (1AM UI on Preprod, circuit call, live demo) | In progress / this README |
+| Level 2 — Waxing Crescent (1AM UI on Preprod, circuit call, live demo) | Done |
 
 ## Initial product idea
 
@@ -121,14 +121,24 @@ night-gate/
 
 ## Preprod contract address
 
-See [docs/evidence/DEPLOYMENT.md](docs/evidence/DEPLOYMENT.md). After 1AM deploy, set `VITE_CONTRACT_ADDRESS` for the live demo.
+| Field | Value |
+|---|---|
+| Contract | `17d06850fed3c49058994d4fced343144159b622579e63fc11e4132307948eef` |
+| Deploy tx | `7bd6c5da8a3459b4ca34d28fce1512abb7ac9719d4935b3bec6b0e5683432f3d` |
+| Block | `2765705` |
+| Network | Preprod |
+| Deployer | 1AM (browser) |
+
+Verified via Preprod indexer `contractAction` → `ContractDeploy`. Night Scan explorer pages may 404; prefer indexer evidence in [docs/evidence/DEPLOYMENT.md](docs/evidence/DEPLOYMENT.md).
+
+Live demo prefills this address for **Join contract**.
 
 ## Evidence checklist — Level 2 — Waxing Crescent
 
 - [x] 1AM connect / disconnect in UI (Lace fallback)
 - [x] Circuit call path from frontend (`checkEligibility`)
 - [x] Observable privacy behavior (public eligible/count/commitment only; score cleared after prove)
-- [x] Preprod deploy path (CLI + 1AM UI) documented; address recorded when available
+- [x] Preprod contract deployed via 1AM; address + tx recorded (see table above)
 - [x] Public GitHub repository + README privacy claim
 - [x] Live demo (Vercel) — see `docs/evidence/LIVE_DEMO.md`
 - [x] Demo video instructions — see `docs/evidence/DEMO_VIDEO.md`
