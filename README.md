@@ -8,6 +8,7 @@
 |---|---|
 | Public repo | https://github.com/manojaggarwal812/night-gate |
 | Live demo | https://night-gate-mauve.vercel.app |
+| Demo video | [nightgate.mp4 (Google Drive)](https://drive.google.com/file/d/1JluSV3vShfEw2ko9q_1sD74GL8mNO3Uj/view?usp=sharing) |
 | Product idea | **Age / Eligibility Gate** ([proposal](docs/evidence/PRODUCT_PROPOSAL.md)) |
 | Preprod contract | `17d06850fed3c49058994d4fced343144159b622579e63fc11e4132307948eef` |
 
@@ -19,7 +20,24 @@ NightGate is a Midnight Compact contract + **1AM** frontend for threshold eligib
 |---|---|
 | Level 1 — New Moon | Done |
 | Level 2 — Waxing Crescent | Done |
-| Level 3 — First Quarter (tests, CI/CD, polished dApp, idea) | Done (demo video pending submitter) |
+| Level 3 — First Quarter (tests, CI/CD, polished dApp, idea) | Done |
+| Idea Submission (Level 4–6 track) | Ready — paste from [PRODUCT_PROPOSAL.md](docs/evidence/PRODUCT_PROPOSAL.md) |
+
+## Screenshots
+
+### Desktop live demo
+
+![NightGate desktop](docs/screenshots/desktop-live.png)
+
+### Mobile responsive (390×844)
+
+![NightGate mobile](docs/screenshots/mobile-live.png)
+
+### Tests — 10 passing
+
+![Vitest evidence](docs/screenshots/test-results.png)
+
+More evidence: [docs/screenshots/](docs/screenshots/) · raw log: [test-output.txt](docs/screenshots/test-output.txt)
 
 ## Privacy model — what an observer can and cannot learn
 
@@ -80,7 +98,8 @@ GitHub Actions (`.github/workflows/ci.yml`) on every push / PR to `main`:
 3. `npm run web:sync-zk`
 4. `npm --prefix web ci && npm --prefix web run build`
 
-Badge at the top of this README reflects the latest run.
+Badge at the top of this README reflects the latest run:  
+https://github.com/manojaggarwal812/night-gate/actions/workflows/ci.yml
 
 ## Preprod deployment
 
@@ -101,8 +120,8 @@ Badge at the top of this README reflects the latest run.
 - [x] Public GitHub + privacy model section
 - [x] Live demo link
 - [x] Screenshots: desktop / mobile / tests — `docs/screenshots/`
-- [ ] Demo video (1 min) — submitter records; see [DEMO_VIDEO.md](docs/evidence/DEMO_VIDEO.md)
-- [x] Product proposal drafted for approval
+- [x] Demo video — [Drive link](https://drive.google.com/file/d/1JluSV3vShfEw2ko9q_1sD74GL8mNO3Uj/view?usp=sharing)
+- [x] Product proposal drafted for Idea Submission form
 
 ## Project layout
 
