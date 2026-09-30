@@ -26,10 +26,7 @@ export function selectWallet(): InitialAPI {
   }
 
   const oneAm = wallets.find(
-    (w) =>
-      /^1am$/i.test(w.name) ||
-      /1am/i.test(w.rdns) ||
-      /1am/i.test(w.name),
+    (w) => /^1am$/i.test(w.name) || /1am/i.test(w.rdns ?? ""),
   );
   if (oneAm) return oneAm;
 

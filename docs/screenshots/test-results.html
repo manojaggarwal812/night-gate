@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NightGate — Vitest evidence</title>
+    <style>
+      body {
+        margin: 0;
+        background: #071018;
+        color: #d8e6ef;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        padding: 2rem;
+      }
+      h1 {
+        font-family: Georgia, serif;
+        color: #e7eef3;
+      }
+      pre {
+        background: #0e1a24;
+        border: 1px solid #243746;
+        padding: 1.25rem;
+        border-radius: 8px;
+        overflow: auto;
+        line-height: 1.45;
+        white-space: pre-wrap;
+      }
+      .ok {
+        color: #5ecf9a;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>NightGate test evidence</h1>
+    <p class="ok">10 tests passed (2 files) — 2026-09-30</p>
+    <pre id="out"></pre>
+    <script>
+      document.getElementById("out").textContent = `> night-gate@0.1.0 test
+> vitest run
+
+ RUN  v3.2.7
+
+ ✓ tests/witnesses.test.ts (4 tests)
+ ✓ tests/night-gate.test.ts (6 tests)
+
+ Test Files  2 passed (2)
+      Tests  10 passed (10)
+
+Coverage areas:
+- managed artifacts (compiler/keys/zkir)
+- contract-info circuits + privateClaim witness
+- initial ledger state
+- eligible=true path (score ≥ 18)
+- under-threshold eligible=false still allowed
+- claim LE u64 + NightGat tag encoding
+- hex round-trip
+- malformed claim rejection`;
+    </script>
+  </body>
+</html>
