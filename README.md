@@ -74,7 +74,7 @@ sequenceDiagram
 - Compact CLI `+0.31.1` (WSL on Windows: `npm run compile:wsl`)
 - `@midnight-ntwrk/compact-runtime@0.16.0`, Midnight.js **4.1.1**
 - **1AM** browser wallet on **Preprod** ([1am.xyz](https://1am.xyz)) — Lace also works as fallback
-- Optional local Docker proof-server on `:6300` (not required when 1AM supplies `proverServerUri`)
+- Optional local Docker proof-server on `:6300` — only a fallback; primary proving uses `@midnight-ntwrk/midnight-js-dapp-connector-proof-provider` via 1AM `getProvingProvider`
 
 ## Quick start
 
@@ -88,7 +88,7 @@ npm run web:dev
 
 Open http://localhost:5173 — Connect **1AM** (Preprod) → Deploy or Join → enter private score → Call `checkEligibility`.
 
-1AM injects at `window.midnight['1am']`, sponsors proving/DUST via its prover, and does not require a local Docker proof-server for typical flows ([1AM developers](https://1am.xyz/developers)).
+1AM injects at `window.midnight['1am']`. Proving prefers **`dappConnectorProofProvider`** (wallet `getProvingProvider`); HTTP proof-server is only a fallback.
 
 CLI deploy (optional; **1AM UI deploy** is preferred for Level 2):
 

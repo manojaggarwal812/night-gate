@@ -31,6 +31,7 @@ export function useMidnightWallet() {
           "getUnshieldedAddress",
           "getShieldedAddresses",
           "getConfiguration",
+          "getProvingProvider",
           "balanceUnsealedTransaction",
           "submitTransaction",
           "getConnectionStatus",
