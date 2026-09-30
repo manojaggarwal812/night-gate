@@ -1,9 +1,12 @@
 import { CompiledContract } from "@midnight-ntwrk/compact-js";
 import {
+  createCircuitCallTxInterface,
   deployContract,
-  findDeployedContract,
+  verifyContractState,
 } from "@midnight-ntwrk/midnight-js-contracts";
-import { Contract } from "@ng/contract";
+import { ContractExecutable } from "@midnight-ntwrk/midnight-js-protocol/compact-js";
+import { sampleSigningKey } from "@midnight-ntwrk/midnight-js-protocol/compact-runtime";
+import { Contract, ledger } from "@ng/contract";
 import {
   createPrivateState,
   PRIVATE_STATE_ID,
@@ -23,9 +26,19 @@ const compiledContract = CompiledContract.make("night-gate", Contract).pipe(
   CompiledContract.withWitnesses(witnesses as never),
 );
 
-export type DeployedNightGate = Awaited<
-  ReturnType<typeof deployContract<typeof Contract>>
->;
+export type DeployedNightGate = {
+  deployTxData: {
+    private: {
+      signingKey: string;
+      initialPrivateState: NightGatePrivateState;
+    };
+    public: {
+      contractAddress: string;
+      initialContractState: unknown;
+    };
+  };
+  callTx: ReturnType<typeof createCircuitCallTxInterface>;
+};
 
 export async function deployNightGate(
   providers: NightGateProviders,
@@ -37,63 +50,114 @@ export async function deployNightGate(
     initialPrivateState: createPrivateState(scoreForInitialState),
   });
   const address = contract.deployTxData.public.contractAddress;
-  return { contract, address };
+  return { contract: contract as unknown as DeployedNightGate, address };
 }
 
+/**
+ * Join without `watchForDeployTxData` (that poll hangs once the latest
+ * indexer action is a ContractCall instead of ContractDeploy).
+ * Reads state over HTTP query and builds the call interface locally.
+ */
 export async function joinNightGate(
   providers: NightGateProviders,
   contractAddress: string,
   privateState?: NightGatePrivateState,
 ): Promise<DeployedNightGate> {
-  return findDeployedContract(providers, {
-    contractAddress,
-    compiledContract,
-    privateStateId: PRIVATE_STATE_ID,
-    initialPrivateState: privateState ?? createPrivateState(0n),
-  });
+  const address = contractAddress.trim();
+  if (!address) throw new Error("Contract address required");
+
+  providers.privateStateProvider.setContractAddress(address);
+
+  const currentContractState =
+    await providers.publicDataProvider.queryContractState(address);
+  if (!currentContractState) {
+    throw new Error(`No contract found on Preprod at ${address}`);
+  }
+
+  const initialContractState =
+    (await providers.publicDataProvider.queryDeployContractState(address)) ??
+    currentContractState;
+
+  const circuitIds = ContractExecutable.make(compiledContract).getProvableCircuitIds();
+  const verifierKeys =
+    await providers.zkConfigProvider.getVerifierKeys(circuitIds);
+  verifyContractState(verifierKeys, currentContractState);
+
+  const existingKey =
+    await providers.privateStateProvider.getSigningKey(address);
+  const signingKey = existingKey ?? sampleSigningKey();
+  if (!existingKey) {
+    await providers.privateStateProvider.setSigningKey(address, signingKey);
+  }
+
+  const initialPrivateState = privateState ?? createPrivateState(0n);
+  await providers.privateStateProvider.set(
+    PRIVATE_STATE_ID,
+    initialPrivateState,
+  );
+
+  return {
+    deployTxData: {
+      private: {
+        signingKey,
+        initialPrivateState,
+      },
+      public: {
+        contractAddress: address,
+        initialContractState,
+      },
+    },
+    callTx: createCircuitCallTxInterface(
+      providers,
+      compiledContract,
+      address,
+      PRIVATE_STATE_ID,
+    ),
+  };
+}
+
+/** Public ledger snapshot via indexer HTTP — no wallet / prove txs. */
+export async function readPublicState(
+  providers: NightGateProviders,
+  contractAddress: string,
+): Promise<PublicLedgerView> {
+  const state =
+    await providers.publicDataProvider.queryContractState(contractAddress);
+  if (!state) {
+    throw new Error(`No contract state at ${contractAddress}`);
+  }
+  const view = ledger(state.data);
+  return {
+    eligible: Boolean(view.eligible),
+    checkCount: view.checkCount as bigint,
+    latestCommitmentHex: bytesToHex(view.latestCommitment as Uint8Array),
+  };
 }
 
 export async function checkEligibility(
+  providers: NightGateProviders,
   contract: DeployedNightGate,
   score: bigint,
 ): Promise<{
   txHash?: string;
   public: PublicLedgerView;
 }> {
-  // Update local private claim before proving so witness matches score.
-  // findDeployedContract / deployContract already hold private state; callTx
-  // uses the stored private state + circuit param.
+  const address = contract.deployTxData.public.contractAddress;
+  // Keep witness claim in sync with the private score parameter.
+  await providers.privateStateProvider.set(
+    PRIVATE_STATE_ID,
+    createPrivateState(score),
+  );
+
   const txData = await contract.callTx.checkEligibility(score);
   const pub = txData.public as {
     txHash?: string;
     txId?: string;
   };
 
-  // After call, read public ledger via getters
-  const eligibleTx = await contract.callTx.getEligible();
-  const countTx = await contract.callTx.getCheckCount();
-  const commitTx = await contract.callTx.getLatestCommitment();
-
-  const commitment = commitTx.private.result as Uint8Array;
+  const publicView = await readPublicState(providers, address);
   return {
     txHash: pub.txHash ?? pub.txId,
-    public: {
-      eligible: Boolean(eligibleTx.private.result),
-      checkCount: countTx.private.result as bigint,
-      latestCommitmentHex: bytesToHex(commitment),
-    },
-  };
-}
-
-export async function readPublicState(
-  contract: DeployedNightGate,
-): Promise<PublicLedgerView> {
-  const eligibleTx = await contract.callTx.getEligible();
-  const countTx = await contract.callTx.getCheckCount();
-  const commitTx = await contract.callTx.getLatestCommitment();
-  return {
-    eligible: Boolean(eligibleTx.private.result),
-    checkCount: countTx.private.result as bigint,
-    latestCommitmentHex: bytesToHex(commitTx.private.result as Uint8Array),
+    public: publicView,
   };
 }

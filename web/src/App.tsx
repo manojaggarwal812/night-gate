@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "@midnight-ntwrk/dapp-connector-api";
 import { THRESHOLD } from "@ng/witnesses";
 import { useMidnightWallet } from "./hooks/useLaceWallet";
@@ -32,6 +32,7 @@ export default function App() {
   const [actionBusy, setActionBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [revealedLocally, setRevealedLocally] = useState(false);
+  const autoJoinTried = useRef(false);
 
   const thresholdLabel = useMemo(() => THRESHOLD.toString(), []);
   const walletLabel = wallet.walletName ?? "1AM";
@@ -47,18 +48,70 @@ export default function App() {
     return fn(providers);
   }
 
+  const doJoin = useCallback(
+    async (address: string, silent = false) => {
+      if (!address.trim()) {
+        setActionError("Paste a Preprod contract address first.");
+        return null;
+      }
+      if (!silent) {
+        setActionBusy(true);
+        setActionError(null);
+        setStatus("Joining deployed NightGate (no wallet txs)…");
+      }
+      try {
+        const contract = await withProviders(async (p) => {
+          const joined = await joinNightGate(p, address.trim());
+          const view = await readPublicState(p, address.trim());
+          setLedger(view);
+          return joined;
+        });
+        setDeployed(contract);
+        setContractAddress(address.trim());
+        setStatus(`Joined ${shortAddr(address.trim())} — ready to call`);
+        return contract;
+      } catch (err) {
+        setActionError(err instanceof Error ? err.message : String(err));
+        setStatus("Join failed.");
+        return null;
+      } finally {
+        if (!silent) setActionBusy(false);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- withProviders uses wallet.session
+    [wallet.connected],
+  );
+
+  // Auto-join known Preprod contract after wallet connect.
+  useEffect(() => {
+    if (!wallet.connected) {
+      autoJoinTried.current = false;
+      setDeployed(null);
+      return;
+    }
+    if (autoJoinTried.current || deployed || !contractAddress.trim()) return;
+    autoJoinTried.current = true;
+    setStatus("Auto-joining Preprod contract…");
+    void doJoin(contractAddress, true).then((joined) => {
+      if (!joined) {
+        setStatus("Connect OK — tap Join contract if auto-join failed.");
+      }
+    });
+  }, [wallet.connected, contractAddress, deployed, doJoin]);
+
   async function onDeploy() {
     setActionBusy(true);
     setActionError(null);
     setStatus("Deploying NightGate to Preprod (proving may take a minute)…");
     try {
-      const { contract, address } = await withProviders((p) =>
-        deployNightGate(p, 0n),
-      );
+      const { contract, address } = await withProviders(async (p) => {
+        const result = await deployNightGate(p, 0n);
+        const view = await readPublicState(p, result.address);
+        setLedger(view);
+        return result;
+      });
       setDeployed(contract);
       setContractAddress(address);
-      const view = await readPublicState(contract);
-      setLedger(view);
       setStatus(`Deployed on Preprod: ${address}`);
     } catch (err) {
       setActionError(err instanceof Error ? err.message : String(err));
@@ -69,41 +122,25 @@ export default function App() {
   }
 
   async function onJoin() {
-    if (!contractAddress.trim()) {
-      setActionError("Paste a Preprod contract address first.");
-      return;
-    }
-    setActionBusy(true);
-    setActionError(null);
-    setStatus("Joining deployed NightGate…");
-    try {
-      const contract = await withProviders((p) =>
-        joinNightGate(p, contractAddress.trim()),
-      );
-      setDeployed(contract);
-      const view = await readPublicState(contract);
-      setLedger(view);
-      setStatus(`Joined ${shortAddr(contractAddress.trim())}`);
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : String(err));
-      setStatus("Join failed.");
-    } finally {
-      setActionBusy(false);
-    }
+    await doJoin(contractAddress, false);
   }
 
   async function onCheck() {
-    if (!deployed) {
-      setActionError("Deploy or join a contract first.");
-      return;
-    }
     const score = BigInt(scoreInput || "0");
     setActionBusy(true);
     setActionError(null);
     setRevealedLocally(true);
     setStatus("Proving eligibility without disclosing the private score…");
     try {
-      const result = await checkEligibility(deployed, score);
+      let contract = deployed;
+      if (!contract) {
+        setStatus("Joining first, then proving…");
+        contract = await doJoin(contractAddress, true);
+        if (!contract) throw new Error("Join failed — cannot call circuit");
+      }
+      const result = await withProviders((p) =>
+        checkEligibility(p, contract!, score),
+      );
       setLedger(result.public);
       setTxHash(result.txHash ?? null);
       setScoreInput("");
@@ -116,6 +153,7 @@ export default function App() {
     } catch (err) {
       setActionError(err instanceof Error ? err.message : String(err));
       setStatus("Circuit call failed.");
+      setRevealedLocally(false);
     } finally {
       setActionBusy(false);
     }
@@ -191,7 +229,11 @@ export default function App() {
             <input
               id="contract"
               value={contractAddress}
-              onChange={(e) => setContractAddress(e.target.value)}
+              onChange={(e) => {
+                setContractAddress(e.target.value);
+                setDeployed(null);
+                autoJoinTried.current = false;
+              }}
               placeholder="Preprod contract address"
               spellCheck={false}
             />
@@ -213,17 +255,20 @@ export default function App() {
               disabled={!wallet.connected || actionBusy}
               onClick={() => void onJoin()}
             >
-              Join contract
+              {deployed ? "Re-join" : "Join contract"}
             </button>
             <button
               className="btn btn-accent"
               type="button"
-              disabled={!wallet.connected || !deployed || actionBusy}
+              disabled={!wallet.connected || actionBusy || !contractAddress.trim()}
               onClick={() => void onCheck()}
             >
               Call checkEligibility
             </button>
           </div>
+          {deployed ? (
+            <p className="note">Joined — Call checkEligibility needs one wallet confirm.</p>
+          ) : null}
           {revealedLocally ? (
             <p className="note">Proving… private score held only in this session.</p>
           ) : null}
@@ -272,14 +317,8 @@ export default function App() {
           </div>
           {contractAddress ? (
             <p className="note">
-              Explorer:{" "}
-              <a
-                href={`${PREPROD.explorerContractBase}/${encodeURIComponent(contractAddress)}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                open contract
-              </a>
+              Indexer-verified address (explorer UI may 404):{" "}
+              <code>{shortAddr(contractAddress)}</code>
             </p>
           ) : null}
         </section>
