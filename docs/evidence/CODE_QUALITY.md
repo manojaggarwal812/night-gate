@@ -1,32 +1,37 @@
-# Code quality audit — Level 2
+# Code quality audit — Level 3
 
-Date: 2026-09-29  
-Scope: NightGate contract, witnesses, tests, deploy helpers, Lace web UI
+Date: 2026-09-30  
+Scope: contract, witnesses, tests, providers, wallet bridge, UI, CI
 
-## Findings & fixes
+## Deep audit findings
 
-| Area | Finding | Action |
-|---|---|---|
-| Witness encoding | Domain tag overflowed 32-byte claim (`nightgate` @ offset 24) | Fixed to 8-byte `NightGat` tag |
-| Deploy defaults | Defaulted to Preview after Level 1 | Level 2 defaults to Preprod; scripts for both networks |
-| Lace bridge | Needed WalletProvider shape for midnight-js 4.1.1 | `web/src/lib/walletAdapter.ts` balances/submits via ConnectedAPI |
-| Indexer WS in browser | `isomorphic-ws` WebSocket undefined in Vite | Pass native `WebSocket` into `indexerPublicDataProvider` |
-| ZK assets for browser | FetchZkConfigProvider expects `/keys` + `/zkir` | `npm run web:sync-zk` + `web/public/zk/night-gate` |
-| Secrets | Seeds / `.env` | Gitignored; never committed |
-| Privacy UX | Score could linger in input after prove | Cleared after successful `checkEligibility` |
-| Tests | Runtime + artifact coverage | 6 Vitest tests green |
-| Branding | Distinct from attestation clones | NightGate eligibility-gate metaphor; Fraunces/Manrope |
+| Area | Finding | Severity | Action |
+|---|---|---|---|
+| Provider session | Fresh Level store per click dropped `setContractAddress` | High | Session-cached `getProviders()` |
+| Join hang | `watchForDeployTxData` waits forever after later `ContractCall`s | High | HTTP `queryContractState` join path |
+| Getter txs | Join called `getEligible`/etc via `callTx` (extra wallet proves) | High | Indexer `ledger()` read |
+| Ledger WASM dupes | Multiple `ledger-v8` copies → `maintenanceAuthority` type error | High | Vite dedupe + npm overrides |
+| Blank production UI | Node `events` externalized → `EventEmitter` undefined | High | Polyfill aliases |
+| Proving path | HTTP proof URL fragile vs 1AM | Med | Prefer `dappConnectorProofProvider` |
+| Mobile layout | Grid cramped on narrow viewports | Med | `@media (max-width: 720px)` rules |
+| Wallet picker | Redundant `/1am/` name checks | Low | Simplified `selectWallet` |
+| Witness coverage | Encoding only covered indirectly | Med | Added `tests/witnesses.test.ts` |
+| CI | No workflow | High | `.github/workflows/ci.yml` |
 
-## Remaining risks (documented, not blockers for checklist wiring)
+## Standards followed
 
-1. **Preprod CLI wallet sync** may hang on public RPC WS — Lace UI deploy is the supported Level 2 path.
-2. **Live circuit call** requires funded Lace + local/proof-server URI configured in the wallet.
-3. **Demo video** must be recorded by the submitter with Lace installed.
-4. Bundle size is large (ledger WASM) — acceptable for Level 2; code-split later.
+- No secrets in repo (seeds / `.env` gitignored)
+- Privacy UX: score cleared after successful prove
+- Single provider instance per wallet session
+- Official Midnight provider stack (`network-id`, indexer, level, fetch zk, dapp proving)
+- Meaningful commits on `main`
 
-## Verification commands
+## Verification
 
 ```bash
 npm test
-npm run web:build
+npm run web:sync-zk
+npm --prefix web run build
 ```
+
+CI runs the same on every push to `main`.

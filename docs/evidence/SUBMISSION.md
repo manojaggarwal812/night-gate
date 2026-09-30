@@ -1,18 +1,18 @@
-# NightGate — Level 2 submission status
+# NightGate — Level 3 submission status
 
 | Requirement | Status | Evidence |
 |---|---|---|
-| Wallet connect / disconnect | Done (1AM preferred) | `web/src/lib/selectWallet.ts`, UI topbar |
-| Circuit called from frontend | Done | `web/src/lib/nightGateApi.ts` → `checkEligibility` |
-| Observable privacy behavior | Done | Public panel + score cleared after prove; privacy table |
-| Preprod contract address | Done | `17d06850…948eef` — see `DEPLOYMENT.md` / README |
-| Public GitHub | Done | https://github.com/manojaggarwal812/night-gate |
-| Live demo (Vercel) | Done | https://night-gate-mauve.vercel.app |
-| Demo video | Instructions ready | `docs/evidence/DEMO_VIDEO.md` |
-| ≥8 commits | Tracked on `main` | `git rev-list --count HEAD` |
-| README privacy claim | Done | `README.md` |
-| Vitest ≥3 | Done (6 passing) | `npm test` |
+| Functional privacy dApp | Done | Live demo + Preprod contract |
+| ≥3 tests | Done | `npm test` (10) |
+| CI/CD | Done | `.github/workflows/ci.yml` + README badge |
+| Idea from list | Done | Age / Eligibility Gate |
+| Proposal for approval | Drafted | `docs/evidence/PRODUCT_PROPOSAL.md` |
+| ≥10 commits | Done | `git rev-list --count HEAD` |
+| Privacy model README | Done | README section |
+| Live demo | Done | https://night-gate-mauve.vercel.app |
+| Screenshots | Done | `docs/screenshots/` |
+| Demo video | Pending submitter | `docs/evidence/DEMO_VIDEO.md` |
 
 ## Level claim
 
-**Level 2 — Waxing Crescent** (builds on completed Level 1). Primary wallet: **1AM**.
+**Level 3 — First Quarter** (builds on Level 1 + 2). Primary wallet: **1AM**. Idea: **Age / Eligibility Gate**.
