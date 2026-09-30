@@ -40,6 +40,23 @@ export type DeployedNightGate = {
   callTx: ReturnType<typeof createCircuitCallTxInterface>;
 };
 
+function bindPrivateState(
+  providers: NightGateProviders,
+  contractAddress: string,
+): void {
+  providers.privateStateProvider.setContractAddress(contractAddress);
+}
+
+function makeCallTx(providers: NightGateProviders, contractAddress: string) {
+  // createCircuitCallTxInterface also calls setContractAddress
+  return createCircuitCallTxInterface(
+    providers,
+    compiledContract,
+    contractAddress,
+    PRIVATE_STATE_ID,
+  );
+}
+
 export async function deployNightGate(
   providers: NightGateProviders,
   scoreForInitialState = 0n,
@@ -50,13 +67,19 @@ export async function deployNightGate(
     initialPrivateState: createPrivateState(scoreForInitialState),
   });
   const address = contract.deployTxData.public.contractAddress;
-  return { contract: contract as unknown as DeployedNightGate, address };
+  bindPrivateState(providers, address);
+  return {
+    contract: {
+      ...(contract as unknown as DeployedNightGate),
+      callTx: makeCallTx(providers, address),
+    },
+    address,
+  };
 }
 
 /**
- * Join without `watchForDeployTxData` (that poll hangs once the latest
- * indexer action is a ContractCall instead of ContractDeploy).
- * Reads state over HTTP query and builds the call interface locally.
+ * Attach to an already-deployed Preprod contract.
+ * Uses HTTP indexer queries (no watchForDeployTxData hang after later calls).
  */
 export async function joinNightGate(
   providers: NightGateProviders,
@@ -66,7 +89,7 @@ export async function joinNightGate(
   const address = contractAddress.trim();
   if (!address) throw new Error("Contract address required");
 
-  providers.privateStateProvider.setContractAddress(address);
+  bindPrivateState(providers, address);
 
   const currentContractState =
     await providers.publicDataProvider.queryContractState(address);
@@ -78,7 +101,8 @@ export async function joinNightGate(
     (await providers.publicDataProvider.queryDeployContractState(address)) ??
     currentContractState;
 
-  const circuitIds = ContractExecutable.make(compiledContract).getProvableCircuitIds();
+  const circuitIds =
+    ContractExecutable.make(compiledContract).getProvableCircuitIds();
   const verifierKeys =
     await providers.zkConfigProvider.getVerifierKeys(circuitIds);
   verifyContractState(verifierKeys, currentContractState);
@@ -98,25 +122,14 @@ export async function joinNightGate(
 
   return {
     deployTxData: {
-      private: {
-        signingKey,
-        initialPrivateState,
-      },
-      public: {
-        contractAddress: address,
-        initialContractState,
-      },
+      private: { signingKey, initialPrivateState },
+      public: { contractAddress: address, initialContractState },
     },
-    callTx: createCircuitCallTxInterface(
-      providers,
-      compiledContract,
-      address,
-      PRIVATE_STATE_ID,
-    ),
+    callTx: makeCallTx(providers, address),
   };
 }
 
-/** Public ledger snapshot via indexer HTTP — no wallet / prove txs. */
+/** Public ledger via indexer HTTP — no wallet / prove txs. */
 export async function readPublicState(
   providers: NightGateProviders,
   contractAddress: string,
@@ -134,28 +147,40 @@ export async function readPublicState(
   };
 }
 
+/**
+ * Prove + submit checkEligibility, then refresh public view from indexer.
+ * Always re-binds contract address + rebuilds callTx on the *same* providers.
+ */
 export async function checkEligibility(
   providers: NightGateProviders,
-  contract: DeployedNightGate,
+  contractAddress: string,
   score: bigint,
 ): Promise<{
   txHash?: string;
   public: PublicLedgerView;
 }> {
-  const address = contract.deployTxData.public.contractAddress;
-  // Keep witness claim in sync with the private score parameter.
+  const address = contractAddress.trim();
+  if (!address) throw new Error("Contract address required");
+
+  bindPrivateState(providers, address);
   await providers.privateStateProvider.set(
     PRIVATE_STATE_ID,
     createPrivateState(score),
   );
 
-  const txData = await contract.callTx.checkEligibility(score);
-  const pub = txData.public as {
-    txHash?: string;
-    txId?: string;
-  };
+  const before = await readPublicState(providers, address);
+  const callTx = makeCallTx(providers, address);
+  const txData = await callTx.checkEligibility(score);
+  const pub = txData.public as { txHash?: string; txId?: string };
 
-  const publicView = await readPublicState(providers, address);
+  // Indexer can lag briefly after submit — poll until checkCount moves.
+  let publicView = before;
+  for (let i = 0; i < 8; i++) {
+    await new Promise((r) => setTimeout(r, 1200));
+    publicView = await readPublicState(providers, address);
+    if (publicView.checkCount !== before.checkCount) break;
+  }
+
   return {
     txHash: pub.txHash ?? pub.txId,
     public: publicView,

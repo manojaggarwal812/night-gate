@@ -2,13 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "@midnight-ntwrk/dapp-connector-api";
 import { THRESHOLD } from "@ng/witnesses";
 import { useMidnightWallet } from "./hooks/useLaceWallet";
-import { buildProviders } from "./lib/providers";
+import { clearProvidersCache, getProviders } from "./lib/providers";
 import {
   checkEligibility,
   deployNightGate,
   joinNightGate,
   readPublicState,
-  type DeployedNightGate,
   type PublicLedgerView,
 } from "./lib/nightGateApi";
 import { DEFAULT_CONTRACT_ADDRESS, PREPROD } from "./lib/config";
@@ -22,13 +21,11 @@ function shortAddr(value: string): string {
 export default function App() {
   const wallet = useMidnightWallet();
   const [contractAddress, setContractAddress] = useState(DEFAULT_CONTRACT_ADDRESS);
-  const [deployed, setDeployed] = useState<DeployedNightGate | null>(null);
+  const [joined, setJoined] = useState(false);
   const [scoreInput, setScoreInput] = useState("21");
   const [ledger, setLedger] = useState<PublicLedgerView | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
-  const [status, setStatus] = useState<string>(
-    "Connect 1AM on Preprod to begin.",
-  );
+  const [status, setStatus] = useState("Connect 1AM on Preprod to begin.");
   const [actionBusy, setActionBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [revealedLocally, setRevealedLocally] = useState(false);
@@ -37,81 +34,75 @@ export default function App() {
   const thresholdLabel = useMemo(() => THRESHOLD.toString(), []);
   const walletLabel = wallet.walletName ?? "1AM";
 
-  async function withProviders<T>(
-    fn: (
-      providers: Awaited<ReturnType<typeof buildProviders>>,
-    ) => Promise<T>,
-  ): Promise<T> {
+  const requireApi = useCallback(() => {
     const session = wallet.session.current;
     if (!session) throw new Error("Connect 1AM first");
-    const providers = await buildProviders(session.api);
-    return fn(providers);
-  }
+    return session.api;
+  }, [wallet.session]);
 
   const doJoin = useCallback(
     async (address: string, silent = false) => {
-      if (!address.trim()) {
+      const trimmed = address.trim();
+      if (!trimmed) {
         setActionError("Paste a Preprod contract address first.");
-        return null;
+        return false;
       }
       if (!silent) {
         setActionBusy(true);
         setActionError(null);
-        setStatus("Joining deployed NightGate (no wallet txs)…");
+        setStatus("Joining deployed NightGate (indexer only, no wallet tx)…");
       }
       try {
-        const contract = await withProviders(async (p) => {
-          const joined = await joinNightGate(p, address.trim());
-          const view = await readPublicState(p, address.trim());
-          setLedger(view);
-          return joined;
-        });
-        setDeployed(contract);
-        setContractAddress(address.trim());
-        setStatus(`Joined ${shortAddr(address.trim())} — ready to call`);
-        return contract;
+        const providers = await getProviders(requireApi());
+        await joinNightGate(providers, trimmed);
+        const view = await readPublicState(providers, trimmed);
+        setLedger(view);
+        setJoined(true);
+        setContractAddress(trimmed);
+        setStatus(`Joined ${shortAddr(trimmed)} — ready to call`);
+        setActionError(null);
+        return true;
       } catch (err) {
+        setJoined(false);
         setActionError(err instanceof Error ? err.message : String(err));
         setStatus("Join failed.");
-        return null;
+        return false;
       } finally {
         if (!silent) setActionBusy(false);
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- withProviders uses wallet.session
-    [wallet.connected],
+    [requireApi],
   );
 
-  // Auto-join known Preprod contract after wallet connect.
   useEffect(() => {
     if (!wallet.connected) {
       autoJoinTried.current = false;
-      setDeployed(null);
+      setJoined(false);
+      clearProvidersCache();
+      setStatus("Connect 1AM on Preprod to begin.");
       return;
     }
-    if (autoJoinTried.current || deployed || !contractAddress.trim()) return;
+    if (autoJoinTried.current || joined || !contractAddress.trim()) return;
     autoJoinTried.current = true;
     setStatus("Auto-joining Preprod contract…");
-    void doJoin(contractAddress, true).then((joined) => {
-      if (!joined) {
-        setStatus("Connect OK — tap Join contract if auto-join failed.");
+    void doJoin(contractAddress, true).then((ok) => {
+      if (!ok) {
+        setStatus("Connect OK — tap Join if auto-join failed.");
       }
     });
-  }, [wallet.connected, contractAddress, deployed, doJoin]);
+  }, [wallet.connected, contractAddress, joined, doJoin]);
 
   async function onDeploy() {
     setActionBusy(true);
     setActionError(null);
     setStatus("Deploying NightGate to Preprod (proving may take a minute)…");
     try {
-      const { contract, address } = await withProviders(async (p) => {
-        const result = await deployNightGate(p, 0n);
-        const view = await readPublicState(p, result.address);
-        setLedger(view);
-        return result;
-      });
-      setDeployed(contract);
+      const providers = await getProviders(requireApi());
+      const { address } = await deployNightGate(providers, 0n);
+      const view = await readPublicState(providers, address);
+      setLedger(view);
       setContractAddress(address);
+      setJoined(true);
       setStatus(`Deployed on Preprod: ${address}`);
     } catch (err) {
       setActionError(err instanceof Error ? err.message : String(err));
@@ -126,21 +117,28 @@ export default function App() {
   }
 
   async function onCheck() {
+    const trimmed = contractAddress.trim();
+    if (!trimmed) {
+      setActionError("Paste a Preprod contract address first.");
+      return;
+    }
     const score = BigInt(scoreInput || "0");
     setActionBusy(true);
     setActionError(null);
     setRevealedLocally(true);
     setStatus("Proving eligibility without disclosing the private score…");
     try {
-      let contract = deployed;
-      if (!contract) {
-        setStatus("Joining first, then proving…");
-        contract = await doJoin(contractAddress, true);
-        if (!contract) throw new Error("Join failed — cannot call circuit");
+      const providers = await getProviders(requireApi());
+      // Same provider instance for attach + call (fixes setContractAddress race).
+      if (!joined) {
+        setStatus("Attaching to contract, then proving…");
+        await joinNightGate(providers, trimmed);
+        setJoined(true);
+      } else {
+        providers.privateStateProvider.setContractAddress(trimmed);
       }
-      const result = await withProviders((p) =>
-        checkEligibility(p, contract!, score),
-      );
+
+      const result = await checkEligibility(providers, trimmed, score);
       setLedger(result.public);
       setTxHash(result.txHash ?? null);
       setScoreInput("");
@@ -159,6 +157,13 @@ export default function App() {
     }
   }
 
+  function onDisconnect() {
+    clearProvidersCache();
+    setJoined(false);
+    autoJoinTried.current = false;
+    wallet.disconnect();
+  }
+
   return (
     <div className="shell">
       <header className="topbar">
@@ -170,7 +175,7 @@ export default function App() {
             </span>
           ) : null}
           {wallet.connected ? (
-            <button className="btn" type="button" onClick={wallet.disconnect}>
+            <button className="btn" type="button" onClick={onDisconnect}>
               Disconnect {walletLabel}
             </button>
           ) : (
@@ -231,7 +236,7 @@ export default function App() {
               value={contractAddress}
               onChange={(e) => {
                 setContractAddress(e.target.value);
-                setDeployed(null);
+                setJoined(false);
                 autoJoinTried.current = false;
               }}
               placeholder="Preprod contract address"
@@ -239,12 +244,16 @@ export default function App() {
             />
           </div>
           <div className="field">
-            <label htmlFor="score">Private score (never written cleartext on-chain)</label>
+            <label htmlFor="score">
+              Private score (never written cleartext on-chain)
+            </label>
             <input
               id="score"
               inputMode="numeric"
               value={scoreInput}
-              onChange={(e) => setScoreInput(e.target.value.replace(/[^\d]/g, ""))}
+              onChange={(e) =>
+                setScoreInput(e.target.value.replace(/[^\d]/g, ""))
+              }
               placeholder={`e.g. ${thresholdLabel} or higher`}
             />
           </div>
@@ -255,7 +264,7 @@ export default function App() {
               disabled={!wallet.connected || actionBusy}
               onClick={() => void onJoin()}
             >
-              {deployed ? "Re-join" : "Join contract"}
+              {joined ? "Re-join" : "Join contract"}
             </button>
             <button
               className="btn btn-accent"
@@ -266,11 +275,15 @@ export default function App() {
               Call checkEligibility
             </button>
           </div>
-          {deployed ? (
-            <p className="note">Joined — Call checkEligibility needs one wallet confirm.</p>
+          {joined ? (
+            <p className="note">
+              Joined — Call checkEligibility needs one wallet confirm for prove/submit.
+            </p>
           ) : null}
           {revealedLocally ? (
-            <p className="note">Proving… private score held only in this session.</p>
+            <p className="note">
+              Proving… private score held only in this session.
+            </p>
           ) : null}
           {actionError ? <p className="err">{actionError}</p> : null}
           <p className="status-line">{status}</p>

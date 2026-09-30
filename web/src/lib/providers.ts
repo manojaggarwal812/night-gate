@@ -7,21 +7,29 @@ import type { MidnightProviders } from "@midnight-ntwrk/midnight-js-types";
 import { createWalletProvidersFromConnector } from "./walletAdapter";
 import { PREPROD, ZK_ASSET_BASE } from "./config";
 
-export type NightGateProviders = MidnightProviders<
-  string,
-  string,
-  unknown
->;
+export type NightGateProviders = MidnightProviders<string, string, unknown>;
 
-export async function buildProviders(
+type CacheEntry = {
+  api: ConnectedAPI;
+  providers: NightGateProviders;
+};
+
+let cache: CacheEntry | null = null;
+
+/**
+ * One provider set per wallet session.
+ * Creating a fresh Level private-state provider per click drops setContractAddress()
+ * and breaks Join → Call.
+ */
+export async function getProviders(
   api: ConnectedAPI,
 ): Promise<NightGateProviders> {
+  if (cache?.api === api) return cache.providers;
+
   const config = await api.getConfiguration();
   const indexer = config.indexerUri || PREPROD.indexerUrl;
   const indexerWs = config.indexerWsUri || PREPROD.indexerWsUrl;
-  // 1AM usually supplies its own sponsored prover URI here
-  const proofUrl =
-    config.proverServerUri || PREPROD.proofServerUrl;
+  const proofUrl = config.proverServerUri || PREPROD.proofServerUrl;
 
   const zkConfigProvider = new FetchZkConfigProvider<string>(
     `${window.location.origin}${ZK_ASSET_BASE}`,
@@ -32,7 +40,7 @@ export async function buildProviders(
   const { walletProvider, midnightProvider } =
     createWalletProvidersFromConnector(api, shielded);
 
-  return {
+  const providers: NightGateProviders = {
     privateStateProvider: levelPrivateStateProvider({
       privateStateStoreName: "night-gate-web",
       accountId: shielded.shieldedAddress,
@@ -48,4 +56,14 @@ export async function buildProviders(
     walletProvider,
     midnightProvider,
   };
+
+  cache = { api, providers };
+  return providers;
 }
+
+export function clearProvidersCache(): void {
+  cache = null;
+}
+
+/** @deprecated use getProviders */
+export const buildProviders = getProviders;
